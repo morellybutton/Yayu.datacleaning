@@ -1,132 +1,104 @@
-#code for combining time series disease data and fruitset data for Yayu plots
+#code for combining branch measures and final yield berry counts
 library(tidyverse)
+library(lubridate)
 #library(stringr)
 #library(plyr)
 #library(ggplot2)
 
-setwd("/Volumes/ELDS/ECOLIMITS/Ethiopia/")
+setwd("/Volumes/ELDS/ECOLIMITS/Ethiopia/Yayu/")
 
-site="Yayu"
 #dates<-"nov14"
-year<-"2016"
+years<-c("2014","2015","2016")
 
-#corners1<-c("0,0","0,20","20,20","20,0")
-#corners2<-c("20,0","20,20","40,20","40,0")
-#corners3<-c("SW","NW","NE","SE")
-#corners4<-c("0,20","20,20","20,40","0,40")
-#corners<-cbind(corners1,corners2,corners3,corners4)
-
-plts<-read.csv(paste0(getwd(),"/",site,"/plotnums.csv"))
+plts<-read.csv(paste0(getwd(),"/plotnums.csv"))
 #remove Met station and Forest plots
 plts<-plts[grep("Met_",plts$name,invert=T),]
 plts<-plts[grep("FC",plts$name,invert=T),]
 
 #npp<-npp[grep("FP",npp,invert=T)]
 p<-as.character(plts$name)
-Fset<-data.frame(read.csv(paste0(getwd(),"/",site,"/Yield/Disease.Fruitset_",year,"_cleaned.csv")), stringsAsFactors=F)
-Fset<-Fset[!is.na(Fset$Date),]
 
-final<-list()
-fs.3<-list()
-for(i in 1:length(p)){
-  #if(snames[i]=="B2") next
-  #if(snames[i]=="B3") next
-  #if(snames[i]=="B4") next
-  if(p[i]=="H7") next
-  if(p[i]=="H11") next
-  if(year==2014&p[i]=="H1") next
+for(j in 1:length(years)){
+  final<-list()
+  final.s<-list()
   
-  d.f<-Fset[Fset$Plot==p[i],]
-  #pull out shrubs
-  shr<-as.character(unique(d.f$ShrubId))
-  final.2<-list()
-  fs.2<-list()
-  for(j in 1:length(shr)){
-    fs<-data.frame(d.f[d.f$ShrubId==shr[j],],stringsAsFactors=F)
-    #identify branches
-    br<-unique(fs$Branch.cm)
-    final.1<-list()
-    fs.1<-list()
-    for(k in 1:length(br)){
-      fs1<-data.frame(fs[fs$Branch.cm==br[k],],stringsAsFactors=F)
-      #fs1<-data.frame(lapply(fs1, as.character), stringsAsFactors=FALSE)
-      #check if measurements have been on same shrub/branch continuously
-      if(cumsum(fs1$Same)[nrow(fs1)]!=nrow(fs1)) next
-      No.leaves<-data.frame(cbind(p[i],shr[j],br[k],as.numeric(as.character(fs1$No.of.leaves)),as.numeric(as.character(fs1$NoCLR))/as.numeric(as.character(fs1$No.of.leaves)),as.numeric(as.character(fs1$NoChl))/as.numeric(as.character(fs1$No.of.leaves)),as.numeric(as.character(fs1$NoWilt))/as.numeric(as.character(fs1$No.of.leaves)),as.numeric(as.character(fs1$NoHerb))/as.numeric(as.character(fs1$No.of.leaves))), stringsAsFactors = F)
-      colnames(No.leaves)<-c("Plot","Shrub.id","Branch.cm","Tot.leaves","PropCLR","PropChl","PropWilt","PropHerb")
-      #iCLR<-data.frame(str_split_fixed(as.character(fs1$iCLR),",",max(as.numeric(as.character(fs1$NoCLR)))),stringsAsFactors=F)
-      #iCLR[iCLR==""]<-NA
-      #iCLR[1,]<-as.numeric(iCLR[1:nrow(iCLR),1])
-      #For CLR, the intensity scored using Zeru’s et. al. scale 1= no pustule, 2 = 1 pustule, 3 = 2 pustules and 4 = > 3 pustules
-      one<-str_count(fs1$iCLR, "1")-str_count(fs1$iCLR, "10")
-      two<-str_count(fs1$iCLR, "2")
-      three<-str_count(fs1$iCLR, "3")
-      four<-str_count(fs1$iCLR, "4")
-      for(n in 5:10){
-        four<-rbind(four,str_count(fs1$iCLR, paste(n)))
-        #four<-sum(four,str_count(test,paste(n)))
-      }
-      #if(str_count(fs1$iCLR,"all")==1) four[str_count(fs1$iCLR,"all")] = as.character(fs1$NoCLR[str_count(fs1$iCLR,"all")])
-      four<-colSums(four)
-      No.leaves$iCLR<-(1*one+2*two+3*three+4*four)/as.numeric(as.character(fs1$NoCLR))
-      No.leaves$Date<-fs1$Date
-      rm(one,two,three,four)
-      #find fruitset
-      b1<-fs1[!is.na(fs1$No.of.buds),]
-      buds<-max(as.numeric(as.character(b1$No.of.buds)))
-      flowers<-sum(as.numeric(as.character(b1$No.of.flower)),na.rm=T)
-      berry<-max(as.numeric(as.character(b1$No.of.eberry)),na.rm=T)-as.numeric(as.character(b1[1,"No.of.eberry"]))
-      
-      fl.set<-flowers/buds
-      fr.set<-berry/flowers
-      if(is.na(fr.set)) fr.set<-berry/buds
-      
-      c1<-fs1[!is.na(fs1$No.of.fruits),]
-      fruits<-min(as.numeric(as.character(c1$No.of.fruits)),na.rm=T)
-      if(fr.set==0|is.na(fr.set)) fr.set<-fruits/flowers*fl.set
-      eberry<-max(as.numeric(as.character(b1$No.of.eberry)),na.rm=T)
-      if(eberry>0) fr.drop<-(eberry-fruits)/eberry else fr.drop<-(max(as.numeric(as.character(c1$No.of.fruits)),na.rm=T)-fruits)/max(as.numeric(as.character(c1$No.of.fruits)),na.rm=T)
-      if(fr.drop<0|is.na(fr.drop)) fr.drop=0
-      
-      Fruit.set<-data.frame(cbind(p[i],shr[j],br[k],buds,flowers,eberry,fl.set,fr.set,fruits,fr.drop))
-      colnames(Fruit.set)<-c("plot","shrub.id","branch","buds","flowers","eberry","flower.set","fruit.set","fruits","fruit.drop")
-      fs.1[[k]]<-Fruit.set
-      No.fruits<-data.frame(cbind(as.numeric(as.character(c1$No.of.fruits)),as.numeric(as.character(c1$NoCBB))/as.numeric(as.character(c1$No.of.fruits)),as.numeric(as.character(c1$NoCBD))/as.numeric(as.character(c1$No.of.fruits))), stringsAsFactors = F)
-      colnames(No.fruits)<-c("Tot.fruits","PropCBB","PropCBD")
-      No.fruits$Date<-c1$Date
+  Bcount<-data.frame(read.csv(paste0(getwd(),"/Yield/Final.BerryCounts_",years[j],".csv"), stringsAsFactors=F))
+  if(ncol(Bcount)==8) Bcount <- data_frame(Plot=Bcount$Plot,Shrub.id = Bcount$ShrubId,Branch.cm=Bcount$Branch.cm,Berry.no=Bcount$Berry.no,NoCBB.end=NA)  else Bcount <- data_frame(Plot=Bcount$Plot,Shrub.id = Bcount$ShrubId,Branch.cm=Bcount$Branch.cm,Berry.no=Bcount$Berry.no,NoCBB.end=Bcount$NoCBB) 
+  
+  #fs.3<-list()
+  for(i in 1:length(p)){
+    if(p[i]=="H7") next
+    if(p[i]=="H11") next
+    if(years[j]==2014&p[i]=="H1") next
+    
+  Fset<-data.frame(read.csv(paste0(getwd(),"/Yield/",years[j],"/Branchdata_",p[i],".csv"), stringsAsFactors=F))
+  Fset<-Fset[!is.na(Fset$Date),]
+  
+  #if(snames[i]=="B2") next
+    #if(snames[i]=="B3") next
+    #if(snames[i]=="B4") next
+  
+  d.f<-data_frame(Plot=Fset$plot,Shrub.id=Fset$Shrub.id,Branch.cm=as.character(Fset$Branch.cm),No.of.buds=as.numeric(Fset$No.of.buds),No.of.flower=as.numeric(Fset$No.of.flower),No.of.eberry=as.numeric(Fset$No.of.eberry),
+                    No.of.fruits=as.numeric(Fset$No.of.fruits),NoCBB=as.numeric(Fset$NoCBB),NoCBD=as.numeric(Fset$NoCBD),No.of.leaves=as.numeric(Fset$No.of.leaves),NoLM=as.numeric(Fset$NoLM),NoCLR=as.numeric(Fset$NoCLR),iCLR=Fset$iCLR,NoChl=as.numeric(Fset$NoChl),
+                    NoWilt=as.numeric(Fset$NoWilt),NoHerb=as.numeric(Fset$NoHerb),month=month(Fset$Date),day=day(Fset$Date),date=as.Date(Fset$Date),Notes=Fset$Notes)
+  #replace NA values for disease counts if just not entered
+  d.f <- d.f %>% mutate(NoCBB=replace(NoCBB,is.na(NoCBB)&!is.na(No.of.fruits),0),NoCBD=replace(NoCBD,is.na(NoCBD)&!is.na(No.of.fruits),0),NoLM=replace(NoLM,is.na(NoLM)&!is.na(No.of.leaves),0),NoWilt=replace(NoWilt,is.na(NoWilt)&!is.na(No.of.leaves),0))
+  
+  #add in final berry count
+  d.f <- left_join(d.f,Bcount %>% filter(Plot==p[i]) %>% select(Shrub.id,Branch.cm,Berry.no,NoCBB.end),by=c("Shrub.id","Branch.cm"))
+  
+  #calculate intensity score using Zeru’s et. al. scale 1= no pustule, 2 = 1 pustule, 3 = 2 pustules and 4 = > 3 pustules
+  d.f <- d.f %>% group_by(Plot,Shrub.id,Branch.cm,month,day) %>% mutate(two=str_count(iCLR,"1")-str_count(iCLR,"10"),three=str_count(iCLR,"2"),four=sum(str_count(iCLR,"3"),str_count(iCLR,"4"),str_count(iCLR,"5"),str_count(iCLR,"6"),str_count(iCLR,"7"),str_count(iCLR,"8"),str_count(iCLR,"9"),str_count(iCLR,"10"))) %>%
+    mutate(iCLR2=sum(two*2,three*3,four*4,na.rm=T)/sum(two,three,four,na.rm=T)) %>% mutate(iCLR2=replace(iCLR2,is.na(iCLR2),1)) %>% mutate(iCLR=replace(iCLR,!is.na(iCLR),as.numeric(iCLR2)))
+  
+  #note whether measurements have been on same branch/shoot throughout monitoring period
+  d.f <- d.f %>% group_by(Plot,Shrub.id,Branch.cm,month,day) %>% mutate(same=1) %>% mutate(same=replace(same,grep("changed",Notes),0))
+  
+  #calculate fruitset
+  #sum buds, flowers and eberries per monitoring event
+  d.f <-d.f %>% group_by(Plot,Shrub.id,Branch.cm,month,day) %>% mutate(Tot.flowers=sum(No.of.buds,No.of.flower,No.of.eberry,na.rm=T)) %>% ungroup()
+  
+  
+  combo <- d.f %>% group_by(Plot,Shrub.id,Branch.cm) %>% 
+    summarise(No.fruits=max(No.of.fruits,na.rm=T), fruitset=max(No.of.fruits,na.rm=T)/max(Tot.flowers,na.rm=T),propCBB=max(NoCBB,na.rm=T)/max(No.of.fruits,na.rm=T),propCBD=max(NoCBD,na.rm=T)/max(No.of.fruits,na.rm=T),
+              fruit.drop=max(No.of.fruits,na.rm=T)-mean(Berry.no,na.rm=T),No.leaves=max(No.of.leaves,na.rm=T),leaf.drop=max(No.of.leaves,na.rm=T)-min(No.of.leaves,na.rm=T),PropLM=max(NoLM,na.rm=T)/max(No.of.leaves,na.rm=T),
+              PropCLR=max(NoCLR,na.rm=T)/max(No.of.leaves,na.rm=T),iCLR=mean(No.of.leaves*as.numeric(iCLR)/No.of.leaves,na.rm=T),PropChl=max(NoChl,na.rm=T)/max(No.of.leaves,na.rm=T),PropWilt=max(NoWilt,na.rm=T)/max(No.of.leaves,na.rm=T),
+              PropHerb=max(NoHerb,na.rm=T)/max(No.of.leaves,na.rm=T),prop.ldrop = leaf.drop/No.leaves, same=prod(same,na.rm=T)) %>% ungroup()
+  
+  #if year is 2014, cannot calculate fruitset
+  #replace fruitset values > 1 with 1 and CBB, CBD and fruitset values with 0 if fruits are 0
+  if(years[j]!=2014) combo <- combo %>% mutate(fruitset = replace(fruitset,fruitset>1,1), propCBD=replace(propCBD,No.fruits==0,0), propCBB = replace(propCBB,No.fruits==0,0), fruitset=replace(fruitset,No.fruits==0,0)) else combo <- combo %>% mutate(fruitset = replace(fruitset,fruitset>1,NA),fruitset=replace(fruitset,No.fruits==0,NA),propCBD=replace(propCBD,No.fruits==0,0), propCBB = replace(propCBB,No.fruits==0,0))
+  
+  #replace leaf disease measures if leaves are 0
+  combo <- combo %>% mutate(PropLM = replace(PropLM,No.leaves==0,0), PropCLR = replace(PropCLR,No.leaves==0,0), iCLR = replace(iCLR,No.leaves==0|PropCLR==0,0), PropChl = replace(PropChl,No.leaves==0,0),PropWilt = replace(PropWilt,No.leaves==0,0),PropHerb = replace(PropHerb,No.leaves==0,0),prop.ldrop=replace(prop.ldrop,No.leaves==0,0)) 
+  
+  #replace negative fruit drop values
+  tmp<-d.f %>% select(Plot,Shrub.id,Branch.cm,No.of.fruits) %>% group_by(Plot,Shrub.id,Branch.cm) %>% summarise(fruit.drop2=max(No.of.fruits,na.rm=T)-min(No.of.fruits[No.of.fruits!=0],na.rm=T))
+  
+  combo<-left_join(combo,tmp, by=c("Plot","Shrub.id","Branch.cm"))
+  combo <- combo %>% group_by(Plot,Shrub.id,Branch.cm)  %>% mutate(fruit.drop=replace(fruit.drop,fruit.drop<0|is.na(fruit.drop),fruit.drop2[fruit.drop<0|is.na(fruit.drop)]),propCBB=replace(propCBB,is.na(propCBB),0),propCBD=replace(propCBD,is.na(propCBD),0),fruit.drop=replace(fruit.drop,No.fruits==0,0))
 
-      branch<-cbind(No.leaves,No.fruits[match(No.leaves$Date,No.fruits$Date),1:3])
-      rownames(branch)<-1:nrow(branch)
-      
-      final.1[[k]]<-branch
-    }
-    fs.2[[j]]<-do.call(rbind.data.frame,fs.1)
-    final.2[[j]]<-do.call(rbind.data.frame,final.1) 
-  }
-  fs.3[[i]]<-do.call(rbind.data.frame,fs.2)
-  final[[i]]<-do.call(rbind.data.frame,final.2)
+  
+  final[[i]]<- combo %>% filter(same==1)
+  #take shrub-level averages
+  combo2 <- combo %>% filter(same==1) %>% group_by(Plot,Shrub.id) %>% summarise(Tot.fruits=sum(No.fruits,na.rm=T),fruitset=sum(No.fruits,na.rm=T)/sum(No.fruits/fruitset,na.rm=T),propCBB=sum(propCBB*No.fruits,na.rm=T)/sum(No.fruits),propCBD=sum(propCBD*No.fruits,na.rm=T)/sum(No.fruits),fruit.drop=sum(fruit.drop,na.rm=T),
+              Tot.leaves=sum(No.leaves,na.rm=T),leaf.drop=sum(leaf.drop,na.rm=T),prop.ldrop=sum(leaf.drop,na.rm=T)/sum(No.leaves,na.rm=T),PropLM=sum(PropLM*No.leaves,na.rm=T)/sum(No.leaves),PropCLR=sum(PropCLR*No.leaves,na.rm=T)/sum(No.leaves,na.rm=T),iCLR=sum(iCLR*PropCLR*No.leaves,na.rm=T)/sum(PropCLR*No.leaves),PropWilt=sum(No.leaves*PropWilt,na.rm=T)/sum(No.leaves,na.rm=T),
+              PropHerb=sum(No.leaves*PropHerb,na.rm=T)/sum(No.leaves,na.rm=T))
+  #replace fruitset values > 1 with 1 and CBB, CBD and fruitset values with 0 if fruits are 0
+  if(years[j]!=2014) combo2 <- combo2 %>% mutate(fruitset = replace(fruitset,fruitset>1,1), propCBD=replace(propCBD,Tot.fruits==0,0), propCBB = replace(propCBB,Tot.fruits==0,0), fruitset=replace(fruitset,Tot.fruits==0,0)) else combo2 <- combo2 %>% mutate(fruitset = replace(fruitset,fruitset>1,NA),fruitset=replace(fruitset,Tot.fruits==0,NA),propCBD=replace(propCBD,Tot.fruits==0,0), propCBB = replace(propCBB,Tot.fruits==0,0))
+  
+  final.s[[i]]<-combo2
+  }  
+  #write final files
+  final.1<-do.call(rbind.data.frame,final)
+  #remove final two colums
+  final.1<-final.1[,1:(ncol(final.1)-2)]
+  #write per branch disease measures to file
+  write.csv(final.1,paste0(getwd(),"/Disease/Final.Disease.branch_",years[j],".csv"))
+  
+  final.s1<-do.call(rbind.data.frame,final.s)
+  #write per shrub disease measures to file
+  write.csv(final.s1,paste0(getwd(),"/Disease/Final.Disease.shrub_",years[j],".csv"))
+  
 }
 
-Final<-do.call(rbind.data.frame,final)
-#correct NAs
-Final[Final$PropCLR==0|is.na(Final$PropCLR),"iCLR"]<-0
-Final[Final$Tot.fruits==0|is.na(Final$Tot.fruits),"PropCBB"]<-0
-Final[Final$Tot.fruits==0|is.na(Final$Tot.fruits),"PropCBD"]<-0
-
-FS<-do.call(rbind.data.frame,fs.3)  
-FS<-data.frame(lapply(FS,as.character),stringsAsFactors = F)
-FS[FS$buds==-Inf,"buds"]<-NA
-FS[FS$eberry==-Inf,"eberry"]<-NA
-
-write.csv(Final,paste0(getwd(),"/",site,"/Yield/Final.disease.branch_",year,".csv"))
-write.csv(FS,paste0(getwd(),"/",site,"/Yield/Final.fruitset.branch_",year,".csv"))
-
-#take plot averages of disease measures for each month
-Final[,4:8]<-data.frame(lapply(Final[,4:8],as.numeric),stringsAsFactors = F)
-Final.1<-ddply(Final,.(Plot,Date),summarise,PropCLR=mean(PropCLR,na.rm=T),PropChl=mean(PropChl,na.rm=T),PropWilt=mean(PropWilt,na.rm=T),PropHerb=mean(PropHerb,na.rm=T),iCLR=mean(iCLR,na.rm=T),PropCBB=mean(PropCBB,na.rm=T),PropCBD=mean(PropCBD,na.rm=T))
-write.csv(Final.1,paste0(getwd(),"/",site,"/Yield/Final.disease.plot_",year,".csv"))
-
-FS[,4:10]<-data.frame(lapply(FS[,4:10],as.numeric),stringsAsFactors = F)
-FS[FS=="Inf"|is.na(FS)]<-NA
-FS.1<-ddply(FS,.(plot),summarise,flower.set=mean(flower.set,na.rm=T),fruit.set=mean(fruit.set,na.rm=T),fruit.drop=mean(fruit.drop,na.rm=T))
-write.csv(FS.1,paste0(getwd(),"/",site,"/Yield/Final.fruitset.plot_",year,".csv"))
