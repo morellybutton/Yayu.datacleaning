@@ -37,12 +37,10 @@ lod<-read.xls(paste0(getwd(),"/Combined_soildata.xlsx"),sheet=2)
 d.F$Total.P.mg.kg<-as.numeric(as.character(d.F$Total.P.mg.kg))
 d.F[is.na(d.F$Total.P.mg.kg),"Total.P.mg.kg"]<-lod[nrow(lod),"X"]
 d.F$weight<-NA
-d.F[d.F$Depth=="0-10","weight"]<-0.1
-d.F[d.F$Depth=="10-30","weight"]<-0.2
+d.F[d.F$Depth=="0-10","weight"]<-0.1/0.3
+d.F[d.F$Depth=="10-30","weight"]<-0.2/0.3
 
-d.F.2<-ddply(d.F[!is.na(d.F$weight),],.(Plot.Code),summarise,N.pct=sum(N.*weight,na.rm=T)/sum(weight,na.rm=T),C.pct=sum(C.*weight,na.rm=T)/sum(weight,na.rm=T),pH=sum(pH..H2O.*weight,na.rm=T)/sum(weight,na.rm=T),Avail.P.ppm=sum(Total.P.mg.kg*weight,na.rm=T)/sum(weight,na.rm=T),Ca.meq=sum(Ca2..*weight,na.rm=T)/sum(weight,na.rm=T),K.meq=sum(K..*weight,na.rm=T)/sum(weight,na.rm=T),Mg.meq=mean(Mg.2.*weight/sum(weight),na.rm=T),Fe.ppm=mean(Fe..mg.kg.*weight/sum(weight),na.rm=T))
-
-#add in C:N ratio
-d.F.2$CN.ratio<-d.F.2$C.pct/d.F.2$N.pct
+d.F.2<-ddply(d.F[!is.na(d.F$weight),],.(Plot.Code),summarise,N.pct=sum(N.*weight,na.rm=T),C.pct=sum(C.*weight,na.rm=T),CN.ratio=sum(C.N.ratio*weight,na.rm=T),pH=sum(pH..H2O.*weight,na.rm=T),Avail.P.ppm=sum(Total.P.mg.kg*weight,na.rm=T),Ca.meq=sum(Ca2..*weight,na.rm=T),
+             K.meq=sum(K..*weight,na.rm=T),Mg.meq=sum(Mg.2.*weight,na.rm=T),Fe.ppm=sum(Fe..mg.kg.*weight,na.rm=T),eCEC.mol.kg=sum(eCEC..mmol..kg*weight,na.rm=T))
 
 write.csv(d.F.2,paste0(getwd(),"/Soil_nutrient_data.csv"))
