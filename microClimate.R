@@ -39,7 +39,8 @@ for (i in 1:length(nums)){
   dat[is.na(dat$LWA),"LWA"]<-0
   
   #generate dates
-  dat[,1]<-as.POSIXct(dat[,1],format="%d/%m/%Y %H:%M")
+  dys<-as.POSIXct(dat[,1],format="%d/%m/%Y %H:%M")
+  if(length(dys[is.na(dys)])==nrow(dat)|year(dys[5])<2014) dat[,1]<-as.POSIXct(dat[,1],format="%d/%m/%y %H:%M") else dat[,1]<-dys
   
   #seq1<-seq(as.POSIXct("2014-05-15 00:00:00"), as.POSIXct("2014-11-30 00:00:00"), by="day")
   #d <- which(outer(as.Date(seq1),as.Date(dat[,2]),"=="),arr.ind = TRUE)
@@ -114,7 +115,7 @@ for (i in 1:length(nums)){
 #A=6.116441, m=7.591386,Tn=240.7263
 #VPD equation = (100-RH)/100*SVP
 for (i in 11:12){
-  met<-data.frame(read.csv(paste0(getwd(),"/",root,i,".csv"),, stringsAsFactors=FALSE))
+  met<-data.frame(read.csv(paste0(getwd(),"/",root,i,".csv"), stringsAsFactors=FALSE))
   #calculate VPD
   met$VPD=(100-as.numeric(met[,6]))/100*6.116441*10^(7.591386*as.numeric(met[,5])/(240.7263+as.numeric(met[,5])))
   #calculate AH
@@ -128,7 +129,8 @@ for (i in 11:12){
   dat$rh[as.numeric(dat$rh)>100]=100
   
   #generate dates
-  met[,1]<-as.POSIXct(met[,1],format="%d/%m/%Y %H:%M")
+  dys<-as.POSIXct(met[,1],format="%d/%m/%Y %H:%M")
+  if(length(dys[is.na(dys)])==nrow(met)) met[,1]<-as.POSIXct(met[,1],format="%d/%m/%y %H:%M") else met[,1]<-dys
   
   #seq1<-seq(as.POSIXct("2014-05-15 00:00:00"), as.POSIXct("2014-11-30 00:00:00"), by="day")
   #d <- which(outer(as.Date(seq1),as.Date(dat[,2]),"=="),arr.ind = TRUE)
