@@ -138,19 +138,20 @@ d.F<-left_join(d.F,met.fruit,by=c("Plot","year"))
 
 ######restart here!!!#######
 #do correlation matrices to remove correlated variables
-d.C<-cbind(d.F[,8:19],d.F[,21:ncol(d.F)])
-d.C<-data.frame(lapply(d.C,as.numeric))
+d.C<- d.F %>% select(-Plot,-Shrub.id,-kebele)
 s<-cor(d.C,use="complete.obs")
 s[is.na(s)]<-0
 
-pdf(paste0(getwd(),"/Analysis/ES/Corrplot_monthly_2015.pdf"))
+pdf(paste0(getwd(),"/Analysis/ES/Corrplot_monthly_2014_2016.pdf"))
 corrplot(s, method = "circle",tl.cex = .7)
 dev.off()
 
 #d.F<-cbind(d.F[,2:8],d.F[,10:ncol(d.F)])
 #d.F$DBH<-as.numeric(as.character(d.F$DBH))
 #add kebele as random variable
-d.F$kebele<-ns[match(d.F$Plot,ns$name),"Kebele"]
+#d.F$kebele<-ns[match(d.F$Plot,ns$name),"Kebele"]
+#save correlation matrix
+write.csv(s,paste0(getwd(),"/Analysis/ES/ES_correlation_analysis.csv"))
 
 #write dataset for reference
 write.csv(d.F,paste0(getwd(),"/Analysis/ES/ES_analysis_dataset.csv"))
