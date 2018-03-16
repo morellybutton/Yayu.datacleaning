@@ -5,14 +5,15 @@ library(gridExtra)
 library(Rmisc)
 library(ggplot2)
 
-setwd("/Volumes/ELDS/ECOLIMITS/Ethiopia/Yayu/MetData/")
+#setwd("/Volumes/ELDS/ECOLIMITS/Ethiopia/Yayu/")
+setwd("/users/alex/Documents/Research/Africa/ECOLIMITS/Data/Yayu/")
 
-names<-data.frame(read.csv(paste0(getwd(),"/MS_names.csv")), stringsAsFactors=FALSE)
-ns<-read.csv("/Volumes/ELDS/ECOLIMITS/Ethiopia/Yayu/plotnums.csv")
-dnames<-data.frame(read.csv(paste0(getwd(),"/DL_names.csv")), stringsAsFactors=FALSE)
+names<-data.frame(read.csv(paste0(getwd(),"/MetData/MS_names.csv")), stringsAsFactors=FALSE)
+ns<-read.csv(paste0(getwd(),"/plotnums.csv"))
+dnames<-data.frame(read.csv(paste0(getwd(),"/MetData/DL_names.csv")), stringsAsFactors=FALSE)
 
 #canopy measures
-canopy<-read.csv("/Volumes/ELDS/ECOLIMITS/Ethiopia/Yayu/NPP/LAI/Analysis/Yayu_gap_analysis.csv")
+canopy<-read.csv(paste0(getwd(),"/NPP/LAI/Analysis/Yayu_gap_analysis.csv"))
 #remove NAs
 #canopy<-canopy[!is.na(canopy$Plot),]
 
@@ -21,7 +22,7 @@ canopy<-read.csv("/Volumes/ELDS/ECOLIMITS/Ethiopia/Yayu/NPP/LAI/Analysis/Yayu_ga
 mS<-as.character(names[grep("Met_",as.character(names$Plot)),"DataLogger"])
 grid1<-list()
 for(j in 1:length(mS)){
-  summ<-read.csv(paste0(getwd(),"/",mS[j],"_summary.csv"))
+  summ<-read.csv(paste0(getwd(),"/MetData/",mS[j],"_summary.csv"))
   #remove NAs
   summ<-summ[!is.na(summ$day),]
   #organize by month
@@ -91,9 +92,9 @@ for(j in 1:length(mS)){
     ,text = element_text(size = 14)
     ,axis.text.x=element_text(angle = 45,hjust=1))
   
-  ggsave(paste0(getwd(),"/Figures/",mS[j],"_ppt.pdf"), width = 12, height = 8)
+  ggsave(paste0(getwd(),"/MetData/Figures/",mS[j],"_ppt.pdf"), width = 12, height = 8)
 #save ppt values
-write.csv(m,paste0(getwd(),"/summary/",mS[j],"_monthlyppt.csv"))
+write.csv(m,paste0(getwd(),"/MetData/summary/",mS[j],"_monthlyppt.csv"))
 }
 
 #create dataframes for each variable
@@ -113,7 +114,7 @@ TAVG<-list() #avg temp
 names<-names[names$DataLogger!="ECO_7",]
 names2<-names[grep("Met_",names$Plot,invert=T),]
 for(i in 1:(length(names2[,1]))){
-  dF<-read.csv(paste0(getwd(),"/",names2[i,"DataLogger"],"_summary.csv"))
+  dF<-read.csv(paste0(getwd(),"/MetData/",names2[i,"DataLogger"],"_summary.csv"))
   #remove NAs
   dF<-dF[!is.na(dF$day),]
   #only take day averages (t3,t4,t5,t6)
@@ -128,7 +129,7 @@ for(i in 1:(length(names2[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  AH[[i]]<-cbind(dF.3$Group.1,dF.3[,6:10])
+  AH[[i]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,grep("vpd",colnames(dF.2))],list(dF.2$month),FUN="mean")
@@ -137,7 +138,7 @@ for(i in 1:(length(names2[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  VPD[[i]]<-cbind(dF.3$Group.1,dF.3[,6:10])
+  VPD[[i]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,5],list(dF.2$month),FUN="max")
@@ -153,7 +154,7 @@ for(i in 1:(length(names2[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  VWC[[i]]<-cbind(dF.3$Group.1,dF.3[,6:10])
+  VWC[[i]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,grep("soilT",colnames(dF.2))],list(dF.2$month),FUN="mean")
@@ -162,7 +163,7 @@ for(i in 1:(length(names2[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  ST[[i]]<-cbind(dF.3$Group.1,dF.3[,6:10])   
+  ST[[i]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])   
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,3],list(dF.2$month),FUN="max")
@@ -181,20 +182,20 @@ for(i in 1:(length(names2[,1]))){
   mnST[[i]]<-dF.3
   rm(dF.3)
   
-  dF.3<-aggregate(dF.2[,grep("Tmax",colnames(dF.2))],list(dF.2$month),FUN="mean")
+  dF.3<-aggregate(dF.2[,grep("Tmax",colnames(dF.2))],list(dF.2$month),FUN="max")
   dF.3$name<-names2[i,"DataLogger"]
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  TMAX[[i]]<-cbind(dF.3$Group.1,dF.3[,2:6])
+  TMAX[[i]]<-cbind(dF.3$Group.1,dF.3[,2:ncol(dF.3)])
   rm(dF.3)
   
-  dF.3<-aggregate(dF.2[,grep("Tmin",colnames(dF.2))],list(dF.2$month),FUN="mean")
+  dF.3<-aggregate(dF.2[,grep("Tmin",colnames(dF.2))],list(dF.2$month),FUN="min")
   dF.3$name<-names2[i,"DataLogger"]
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  TMIN[[i]]<-cbind(dF.3$Group.1,dF.3[,2:6])
+  TMIN[[i]]<-cbind(dF.3$Group.1,dF.3[,2:ncol(dF.3)])
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,grep("Tavg",colnames(dF.2))],list(dF.2$month),FUN="mean")
@@ -203,7 +204,7 @@ for(i in 1:(length(names2[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(names2[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(names2[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(names2[i,"Plot"]),"Kebele"]
-  TAVG[[i]]<-cbind(dF.3$Group.1,dF.3[,6:10])
+  TAVG[[i]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])
   rm(dF.3)
 }
 
@@ -216,7 +217,7 @@ for(i in 1:(length(dnames[,1]))){
   if(dnames[i,"Datalogger.id"]=="ECFF_30") next
   if(dnames[i,"Datalogger.id"]=="NCRC_21") next
   if(dnames[i,"Datalogger.id"]=="ECFF_44") next
-  dF<-read.csv(paste0(getwd(),"/summary/",dnames[i,"Datalogger.id"],"_summary.csv"))
+  dF<-read.csv(paste0(getwd(),"/MetData/summary/",dnames[i,"Datalogger.id"],"_summary.csv"))
   #remove NAs
   dF<-dF[!is.na(dF$day),]
   #only take day averages (t3,t4,t5,t6)
@@ -233,7 +234,7 @@ for(i in 1:(length(dnames[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(dnames[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(dnames[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(dnames[i,"Plot"]),"Kebele"]
-  AH[[i+10]]<-cbind(dF.3$Group.1,dF.3[,6:10]) 
+  AH[[i+10]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)]) 
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,grep("vpd",colnames(dF.2))],list(dF.2$month),FUN="mean")
@@ -242,7 +243,7 @@ for(i in 1:(length(dnames[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(dnames[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(dnames[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(dnames[i,"Plot"]),"Kebele"]
-  VPD[[i+10]]<-cbind(dF.3$Group.1,dF.3[,6:10])  
+  VPD[[i+10]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])  
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,3],list(dF.2$month),FUN="max")
@@ -253,20 +254,20 @@ for(i in 1:(length(dnames[,1]))){
   mVPD[[i+10]]<-dF.3
   rm(dF.3)
   
-  dF.3<-aggregate(dF.2[,grep("Tmax",colnames(dF.2))],list(dF.2$month),FUN="mean")
+  dF.3<-aggregate(dF.2[,grep("Tmax",colnames(dF.2))],list(dF.2$month),FUN="max")
   dF.3$name<-dnames[i,"Datalogger.id"]
   dF.3$elevation<-ns[ns$name==as.character(dnames[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(dnames[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(dnames[i,"Plot"]),"Kebele"]
-  TMAX[[i+10]]<-cbind(dF.3$Group.1,dF.3[,2:6])  
+  TMAX[[i+10]]<-cbind(dF.3$Group.1,dF.3[,2:ncol(dF.3)])  
   rm(dF.3)
   
-  dF.3<-aggregate(dF.2[,grep("Tmin",colnames(dF.2))],list(dF.2$month),FUN="mean")
+  dF.3<-aggregate(dF.2[,grep("Tmin",colnames(dF.2))],list(dF.2$month),FUN="min")
   dF.3$name<-dnames[i,"Datalogger.id"]
   dF.3$elevation<-ns[ns$name==as.character(dnames[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(dnames[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(dnames[i,"Plot"]),"Kebele"]
-  TMIN[[i+10]]<-cbind(dF.3$Group.1,dF.3[,2:6])  
+  TMIN[[i+10]]<-cbind(dF.3$Group.1,dF.3[,2:ncol(dF.3)])  
   rm(dF.3)
   
   dF.3<-aggregate(dF.2[,grep("Tavg",colnames(dF.2))],list(dF.2$month),FUN="mean")
@@ -275,7 +276,7 @@ for(i in 1:(length(dnames[,1]))){
   dF.3$elevation<-ns[ns$name==as.character(dnames[i,"Plot"]),"elevation"] 
   dF.3$patchArea<-ns[ns$name==as.character(dnames[i,"Plot"]),"PatchArea"]
   dF.3$kebele<-ns[ns$name==as.character(dnames[i,"Plot"]),"Kebele"]
-  TAVG[[i+10]]<-cbind(dF.3$Group.1,dF.3[,6:10])    
+  TAVG[[i+10]]<-cbind(dF.3$Group.1,dF.3[,6:ncol(dF.3)])    
   rm(dF,dF.2,dF.3)
 }
 
@@ -290,7 +291,7 @@ ah[ah$name=="ECO_1","eclass"]<-"Forest-Hi"
 ah[ah$name=="ECO_6","eclass"]<-"Forest-Low"
 
 #ah[ah$elevation<1500,6]<-"Low"
-colnames(ah)<-c("month","avg","name","elevation","psize","kebele","eclass")
+colnames(ah)<-c("month","avg","name","elevation","kebele","eclass")
 #ah$psize<-as.character(ah$psize)
 #ah[ah$eclass=="Forest-Hi"|ah$eclass=="Forest-Low","psize"]<-"Forest"
 #ah[ah$psize=="Mid","psize"]<-"Small"
@@ -559,4 +560,4 @@ for(i in 1:length(m)){
   
 }
 colnames(dF)<-c("month","ah","name","elevation","psize","kebele","eclass","tavg","tmax","tmin","vpd","Cavg","Plot","Nov","Jul")
-write.csv(dF,paste0(getwd(),"/Monthly_metdata_withcanopygap.csv"))
+write.csv(dF,paste0(getwd(),"/MetData/Monthly_metdata_withcanopygap.csv"))

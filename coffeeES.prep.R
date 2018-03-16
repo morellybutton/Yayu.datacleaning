@@ -28,7 +28,7 @@ for(j in 1:length(years)){
   tmp[[j]]<-tmp.1
 }
 ES.yield<-do.call(rbind.data.frame,tmp)
-ES.yield<-data_frame(Plot=as.character(ES.yield$Plot),Shrub.id=as.character(ES.yield$Shrub.id),Shrub.kg=ES.yield$wt/1000,year=as.numeric(ES.yield$year))
+ES.yield<-data_frame(ID=1:nrow(ES.yield),Plot=as.character(ES.yield$Plot),Shrub.id=as.character(ES.yield$Shrub.id),Shrub.kg=ES.yield$wt/1000,year=as.numeric(ES.yield$year))
 #remove duplicate rows for WE2-?
 ES.yield<-ES.yield %>% filter(Shrub.id!="WE2-?")
 
@@ -37,6 +37,10 @@ x.yield <- ES.yield %>% group_by(Plot) %>% summarise(avg.kg=mean(Shrub.kg, na.rm
 
 #add to yearly yield measures
 ES.yield <- left_join(ES.yield,x.yield, by="Plot")
+
+#create per plot averages
+ES.yield.plot <- ES.yield %>% group_by(Plot,year) %>% summarise(Shrub.kg=median(Shrub.kg,na.rm=T))
+ES.yield.plot <-left_join(ES.yield.plot,x.yield, by="Plot")
 
 #spread data out by yield per year to calculate variability in yield (mean and SD)
 #x.yield<-ES.yield %>% spread(key="year",value="Shrub.kg")
@@ -72,6 +76,15 @@ ES.disease <- data_frame(Plot=as.character(ES.shrub.disease$Plot),Shrub.id=as.ch
 ES.disease <- ES.disease %>% mutate(leaf.drop=replace(leaf.drop,Tot.leaves==0,0), prop.ldrop=replace(prop.ldrop,Tot.leaves==0,0),propLM=replace(propLM,Tot.leaves==0,0),propCLR=replace(propCLR,Tot.leaves==0,0),iCLR=replace(iCLR,Tot.leaves==0,0),
                                     propWilt=replace(propWilt,Tot.leaves==0,0),propHerb=replace(propHerb,Tot.leaves==0,0),iCLR=replace(iCLR,propCLR==0,0))
 
+#get plot level disease measures
+ES.disease.plot<- ES.disease %>% group_by(Plot,year,Shrub.id) %>% mutate(Tot.flowers=Tot.fruits/fruitset) %>% group_by(Plot,year) %>% 
+  summarise(No.fruits=median(Tot.fruits,na.rm=T),fruitset=sum(Tot.fruits,na.rm=T)/sum(Tot.flowers,na.rm=T),propCBB=sum(propCBB*Tot.fruits,na.rm=T)/sum(Tot.fruits,na.rm=T),
+            propCBD=sum(propCBD*Tot.fruits,na.rm=T)/sum(Tot.fruits,na.rm=T),fruit.drop=sum(fruit.drop,na.rm=T),prop.fdrop=sum(fruit.drop,na.rm = T)/sum(Tot.fruits,na.rm=T),No.leaves=median(Tot.leaves,na.rm=T),leaf.drop=median(leaf.drop,na.rm=T),
+            prop.ldrop=sum(Tot.leaves*prop.ldrop,na.rm = T)/sum(Tot.leaves,na.rm=T),propLM=sum(propLM*Tot.leaves,na.rm=T)/sum(Tot.leaves,na.rm=T),propCLR=sum(propCLR*Tot.leaves,na.rm=T)/sum(Tot.leaves,na.rm=T),
+            iCLR=sum(iCLR*propCLR*Tot.leaves,na.rm=T)/sum(propCLR*Tot.leaves,na.rm=T),propWilt=sum(propWilt*Tot.leaves,na.rm=T)/sum(Tot.leaves,na.rm=T),propHerb=sum(propHerb*Tot.leaves,na.rm=T)/sum(Tot.leaves,na.rm=T)) %>%
+  ungroup()
+ES.disease.plot <- ES.disease.plot %>% mutate(fruitset=replace(fruitset,year==2014,NA),propCBB=replace(propCBB,No.fruits==0,0),propCBD=replace(propCBD,No.fruits==0,0),prop.fdrop=replace(prop.fdrop,No.fruits==0,0))
+
 #load diversity data
 ES.vegetation<-read.csv(paste0(getwd(),"/CarbonStock/Tree_plotdata.csv"))
 
@@ -79,6 +92,8 @@ ES.veg1 <- data_frame(Plot=ES.vegetation$Plot,Shannon.i=ES.vegetation$Shannon.i1
                             BA.shade=ES.vegetation$BA1.shade,BA.npioneer=ES.vegetation$BA1.npioneer,BA.pioneer=ES.vegetation$BA1.pioneer)
 ES.veg2 <- data_frame(Plot=ES.vegetation$Plot,Shannon.i=ES.vegetation$Shannon.i2,BA.legume=ES.vegetation$BA2.legume,BA.deciduous=ES.vegetation$BA2.deciduous,
                       BA.shade=ES.vegetation$BA2.shade,BA.npioneer=ES.vegetation$BA2.npioneer,BA.pioneer=ES.vegetation$BA2.pioneer)
+ES.veg1<-ES.veg1 %>% group_by(Plot) %>% mutate(BA.all=sum(BA.shade,BA.npioneer,BA.pioneer,na.rm=T))
+ES.veg2<-ES.veg2 %>% group_by(Plot) %>% mutate(BA.all=sum(BA.shade,BA.npioneer,BA.pioneer,na.rm=T))
 
 #load coffee density
 coffee.density<-read.csv(paste0(getwd(),"/Yield/Coffee.density_2015_cleaned.csv"))
@@ -110,15 +125,23 @@ ES.management <- left_join(ES.management,ns,by="Plot")
 
 #start with yield measures
 d.F<-ES.yield
+d.F.plot<-ES.yield.plot
+d.F.plot$ID<-1:nrow(d.F.plot)
 
 #add management data
 d.F<-left_join(d.F,ES.management, by="Plot")
+d.F.plot<-left_join(d.F.plot,ES.management, by="Plot")
+#remove duplicates
+d.F<-d.F %>% distinct(ID, .keep_all = TRUE)
+d.F.plot<-d.F.plot %>% distinct(ID, .keep_all = TRUE)
 
 #add coffee density
 d.F<-left_join(d.F,cdensity,by="Plot")
+d.F.plot<-left_join(d.F.plot,cdensity,by="Plot")
 
 #add soil data
 d.F<-left_join(d.F,ES.soil,by="Plot")
+d.F.plot<-left_join(d.F.plot,ES.soil,by="Plot")
 
 #add vegetation diversity data
 ES.veg1$year<-2014
@@ -128,13 +151,18 @@ ES.veg2$year<-2016
 ES.veg<-bind_rows(ES.veg,ES.veg2)
 
 d.F<-left_join(d.F,ES.veg,by=c("Plot","year"))
+d.F.plot<-left_join(d.F.plot,ES.veg,by=c("Plot","year"))
 
 #add fruit set & disease data
 d.F<-left_join(d.F,ES.disease,by=c("Plot","Shrub.id","year"))
+d.F.plot<-left_join(d.F.plot,ES.disease.plot,by=c("Plot","year"))
 
 #add metdata
 d.F<-left_join(d.F,met.flower,by=c("Plot","year"))
 d.F<-left_join(d.F,met.fruit,by=c("Plot","year"))
+
+d.F.plot<-left_join(d.F.plot,met.flower,by=c("Plot","year"))
+d.F.plot<-left_join(d.F.plot,met.fruit,by=c("Plot","year"))
 
 ######restart here!!!#######
 #do correlation matrices to remove correlated variables
@@ -142,16 +170,26 @@ d.C<- d.F %>% select(-Plot,-Shrub.id,-kebele)
 s<-cor(d.C,use="complete.obs")
 s[is.na(s)]<-0
 
-pdf(paste0(getwd(),"/Analysis/ES/Corrplot_monthly_2014_2016.pdf"))
+pdf(paste0(getwd(),"/Analysis/ES/Corrplot_shrub_2014_2016.pdf"))
 corrplot(s, method = "circle",tl.cex = .7)
 dev.off()
+#save correlation matrix
+write.csv(s,paste0(getwd(),"/Analysis/ES/ES.shrub_correlation_analysis.csv"))
+
+d.C<- d.F.plot %>% ungroup() %>% select(-Plot,-kebele)
+s<-cor(d.C,use="complete.obs")
+s[is.na(s)]<-0
+
+pdf(paste0(getwd(),"/Analysis/ES/Corrplot_plot_2014_2016.pdf"))
+corrplot(s, method = "circle",tl.cex = .7)
+dev.off()
+write.csv(s,paste0(getwd(),"/Analysis/ES/ES.plot_correlation_analysis.csv"))
 
 #d.F<-cbind(d.F[,2:8],d.F[,10:ncol(d.F)])
 #d.F$DBH<-as.numeric(as.character(d.F$DBH))
 #add kebele as random variable
 #d.F$kebele<-ns[match(d.F$Plot,ns$name),"Kebele"]
-#save correlation matrix
-write.csv(s,paste0(getwd(),"/Analysis/ES/ES_correlation_analysis.csv"))
 
 #write dataset for reference
-write.csv(d.F,paste0(getwd(),"/Analysis/ES/ES_analysis_dataset.csv"))
+write.csv(d.F,paste0(getwd(),"/Analysis/ES/ES.shrub_analysis_dataset.csv"))
+write.csv(d.F.plot,paste0(getwd(),"/Analysis/ES/ES.plot_analysis_dataset.csv"))
